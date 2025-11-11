@@ -11,11 +11,12 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home/>}/>
-          <Route path="/add-kinkun" element={<AddKinkun/>}/>
-          <Route path="/show-all-kinkun" element={<ShowAllKinkun/>}/>
-          <Route path="/edit-kinkun/:id" element={<EditKinkun/>}/>
+          <Route path="/AddKinkun" element={<AddKinkun/>}/>
+          <Route path="/ShowAllKinkun" element={<ShowAllKinkun/>}/>
+          <Route path="/EditKinkun/:id" element={<EditKinkun/>}/>
         </Routes>
       </BrowserRouter>
+      
     </div>
   )
 }

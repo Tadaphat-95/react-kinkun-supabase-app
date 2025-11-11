@@ -3,32 +3,77 @@ import food from "../assets/food.png";
 import Footer from "../components/Footer";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/SubaseClient";
+import Swal from "sweetalert2";
 
 export default function ShowAllKinkun() {
   const [kinkuns, setKinkuns] = useState([]);
 
   useEffect(() => {
-    const fetchKinkuns = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("kinkun_tb")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (error) {
-          console.error("Fetch error:", error);
-          alert("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
-        } else {
-          setKinkuns(data);
-        }
-      } catch (ex) {
-        console.error("Unexpected error:", ex);
-        alert("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
-      }
-    };
-
     fetchKinkuns();
   }, []);
+
+  const fetchKinkuns = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("kinkun_tb")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Fetch error:", error);
+        alert("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+      } else {
+        setKinkuns(data);
+      }
+    } catch (ex) {
+      console.error("Unexpected error:", ex);
+      alert("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+    }
+  };
+
+  const HandleDeleteClick = async (id, food_image_url) => {
+    const result = await Swal.fire({
+      title: "คุณต้องการลบข้อมูลนี้หรือไม่?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ใช่, ลบเลย",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "red",
+      cancelButtonColor: "gray",
+    });
+
+    if (result.isConfirmed) {
+      // ลบไฟล์ภาพถ้ามี
+      if (food_image_url) {
+        // ดึงชื่อไฟล์จาก URL (สมมติชื่อไฟล์อยู่หลังสุดของ path)
+        const urlParts = food_image_url.split("/");
+        const imageName = urlParts[urlParts.length - 1];
+
+        const { error: storageError } = await supabase.storage
+          .from("kinkunBK")
+          .remove([imageName]);
+
+        if (storageError) {
+          alert("เกิดข้อผิดพลาดในการลบไฟล์รูปภาพ กรุณาลองใหม่อีกครั้ง");
+          return;
+        }
+      }
+
+      // ลบข้อมูลในตาราง
+      const { error: deleteError } = await supabase
+        .from("kinkun_tb")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) {
+        alert("เกิดข้อผิดพลาดในการลบข้อมูล กรุณาลองใหม่อีกครั้ง");
+        return;
+      }
+
+      Swal.fire("ลบข้อมูลเรียบร้อยแล้ว", "", "success");
+      fetchKinkuns(); // รีเฟรชข้อมูลหลังลบ
+    }
+  };
 
   return (
     <div>
@@ -65,23 +110,44 @@ export default function ShowAllKinkun() {
             {kinkuns.map((kinkun) => (
               <tr key={kinkun.id}>
                 <td className="border border-gray-700 p-2">
-                  <img
-                    src={kinkun.image_url || food}
-                    alt={kinkun.what}
-                    className="w-12 h-12 object-cover"
-                  />
+                  {!kinkun.food_img ? (
+                    "-"
+                  ) : (
+                    <img
+                      src={kinkun.food_img}
+                      alt="รูปอาหาร"
+                      className="w-12 h-12 object-cover"
+                    />
+                  )}
                 </td>
-                <td className="border border-gray-700 p-2">{kinkun.what}</td>
-                <td className="border border-gray-700 p-2">{kinkun.where}</td>
-                <td className="border border-gray-700 p-2">{kinkun.pay} บาท</td>
+                <td className="border border-gray-700 p-2">
+                  {kinkun.food_name}
+                </td>
+                <td className="border border-gray-700 p-2">
+                  {kinkun.food_where}
+                </td>
+                <td className="border border-gray-700 p-2">
+                  {kinkun.food_pay} บาท
+                </td>
                 <td className="border border-gray-700 p-2">
                   {new Date(kinkun.created_at).toLocaleDateString("th-TH")}
                 </td>
                 <td className="border border-gray-700 p-2 text-center">
-                  <button className="text-blue-600 hover:underline mr-2">
+                  <Link
+                    to={`/EditKinkun/${kinkun.id}`}
+                    className="text-green-600 mx-2 hover:underline"
+                  >
                     แก้ไข
+                  </Link>
+
+                  <button
+                    className="text-red-600 hover:underline"
+                    onClick={() =>
+                      HandleDeleteClick(kinkun.id, kinkun.food_img)
+                    }
+                  >
+                    ลบ
                   </button>
-                  <button className="text-red-600 hover:underline">ลบ</button>
                 </td>
               </tr>
             ))}
